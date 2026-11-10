@@ -1,0 +1,74 @@
+name: بناء APK أسرة الرياضيات
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: تثبيت Capacitor ونسخ ملفات التطبيق
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: تجهيز مفتاح التوقيع
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          else
+            echo "::warning::لا يوجد مفتاح توقيع في الأسرار، سيُوقَّع التطبيق بمفتاح تجريبي"
+          fi
+
+      - name: بناء APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          mkdir -p ../dist
+          cp app/build/outputs/apk/release/app-release.apk ../dist/family-math-12.apk
+          ls -la ../dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: family-math-12-apk
+          path: dist/family-math-12.apk
+
+      - name: نشر الإصدار في صفحة Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: أسرة الرياضيات – الإصدار 1.${{ github.run_number }}
+          body: |
+            تطبيق أسرة الرياضيات (الرياضيات المتقدمة – الصف الثاني عشر) لأجهزة أندرويد.
+            نزّل ملف family-math-12.apk على الجهاز وافتحه للتثبيت.
+          files: dist/family-math-12.apk
+          make_latest: true

@@ -1,0 +1,9 @@
+{
+  "name": "family-math-apk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "أسرة الرياضيات – تطبيق أندرويد (APK) للرياضيات المتقدمة للصف الثاني عشر",
+  "scripts": {"sync": "cap sync android"},
+  "dependencies": {"@capacitor/android": "6.2.1", "@capacitor/core": "6.2.1"},
+  "devDependencies": {"@capacitor/cli": "6.2.1"}
+}

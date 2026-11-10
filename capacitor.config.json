@@ -1,0 +1,7 @@
+{
+  "appId": "om.familymath.math12",
+  "appName": "أسرة الرياضيات",
+  "webDir": "www",
+  "android": {"allowMixedContent": false, "captureInput": true, "webContentsDebuggingEnabled": false},
+  "server": {"androidScheme": "https"}
+}
