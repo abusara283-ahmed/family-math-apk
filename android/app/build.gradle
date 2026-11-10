@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+def appVersionCode = Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
+def appVersionName = System.getenv("VERSION_NAME") ?: "1.0"
+def hasReleaseKey = System.getenv("KEYSTORE_FILE") != null && new File(System.getenv("KEYSTORE_FILE")).exists()
+
 android {
     namespace "om.familymath.math12"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +11,8 @@ android {
         applicationId "om.familymath.math12"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
-        versionName (System.getenv("VERSION_NAME") ?: "1.0")
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,9 +22,8 @@ android {
     }
     signingConfigs {
         release {
-            def ks = System.getenv("KEYSTORE_FILE")
-            if (ks && file(ks).exists()) {
-                storeFile file(ks)
+            if (hasReleaseKey) {
+                storeFile file(System.getenv("KEYSTORE_FILE"))
                 storePassword System.getenv("KEYSTORE_PASSWORD")
                 keyAlias System.getenv("KEY_ALIAS")
                 keyPassword System.getenv("KEY_PASSWORD")
@@ -29,7 +32,7 @@ android {
     }
     buildTypes {
         release {
-            signingConfig(System.getenv("KEYSTORE_FILE") ? signingConfigs.release : signingConfigs.debug)
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
