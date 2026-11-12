@@ -11,6 +11,8 @@ import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -72,20 +74,36 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void print(String html, String title) {
             runOnUiThread(() -> {
-                printView = new WebView(MainActivity.this);
-                printView.getSettings().setJavaScriptEnabled(true);
-                printView.setWebViewClient(new WebViewClient() {
+                /* WebView مخصص للطباعة يُلحق بالشاشة (مخفياً خلف التطبيق) ليُرسَم كاملاً قبل فتح شاشة الطباعة/الحفظ PDF */
+                ViewGroup root = findViewById(android.R.id.content);
+                if (printView != null) {
+                    try { root.removeView(printView); printView.destroy(); } catch (Exception ignored) { }
+                }
+                final WebView pv = new WebView(MainActivity.this);
+                printView = pv;
+                pv.getSettings().setJavaScriptEnabled(true);
+                pv.getSettings().setTextZoom(100);
+                pv.setVisibility(View.INVISIBLE);
+                root.addView(pv, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                final boolean[] done = {false};
+                pv.setWebViewClient(new WebViewClient() {
                     @Override
                     public void onPageFinished(WebView view, String url) {
+                        if (done[0]) return;
+                        done[0] = true;
                         view.postDelayed(() -> {
-                            PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
-                            String job = (title == null || title.isEmpty()) ? "أسرة الرياضيات" : title;
-                            PrintDocumentAdapter ad = view.createPrintDocumentAdapter(job);
-                            pm.print(job, ad, new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build());
-                        }, 600);
+                            try {
+                                PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+                                String job = (title == null || title.isEmpty()) ? "أسرة الرياضيات" : title;
+                                PrintDocumentAdapter ad = view.createPrintDocumentAdapter(job);
+                                pm.print(job, ad, new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build());
+                            } catch (Exception e) {
+                                Toast.makeText(ctx, "تعذّرت الطباعة، احفظ نسخة من الاختبار ثم افتحها في المتصفح", Toast.LENGTH_LONG).show();
+                            }
+                        }, 900);
                     }
                 });
-                printView.loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null);
+                pv.loadDataWithBaseURL("https://localhost/", html, "text/html", "utf-8", null);
             });
         }
     }
